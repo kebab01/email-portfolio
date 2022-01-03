@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html>
+	
+	<head>
+		<meta http-equiv=”Content-Type” /> 
+		<meta name=”viewport” />
+	</head>
+
+	<style type="text/css">
+		
+		body{
+			background-color: white;
+			font-size: 14px;
+		}
+		th{
+			padding: 20px;
+		}
+		td{
+			padding: 20px;
+		}
+	</style>
+
+	<body>
+		<h1> Weekly Portfolio Summary </h1>
+
+		<div> <p>Hi, //name// </p>
+			<p>Here is a summary of your portfolio as of //date//</p> </div>
+
+		<div>
+			<h3>This Weeks Stock Value</h3>
+			<p>This is a summary of the value of each of your stocks as well as your total portfolio value this week</p>
+
+			<table border style="border-collapse: collapse; margin-top: 30px;">
+				<tr>
+					<th>Ticker</th>
+					<th>Units</th>
+					<th>Closing Price</th>
+					<th>Value</th>
+				</tr>
+				//insertRows1//
+				<tr>
+					<th colspan="3">Total</th>
+					<td>$//total//</td>
+				</tr>
+			</table>
+
+			<h3>Values Compared</h3>
+			<p>This shows how this weeks movements compare to when you purchased the stocks and last weeks prices</p>
+			<table border style="border-collapse: collapse; margin-top: 30px;">
+				<tr>
+					<th>Ticker</th>
+					<th>At Purchase</th>
+					<th>Last Week</th>
+					<th>This Week</th>
+					<th>On Purchase</th>
+					<th>On Last Week</th>
+				</tr>
+				//insertRows2//
+			</table>
+		</div>
+
+		<p>Yours sincerely,</p>
+		<p>Riko</p>
+	</body>
+
+</html>
