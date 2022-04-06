@@ -24,8 +24,8 @@
 	<body>
 		<h1> Weekly Portfolio Summary </h1>
 
-		<div> <p>Hi, //name// </p>
-			<p>Here is a summary of your portfolio as of //date//</p> </div>
+		<div> <p>Hi, {{person['name']}} </p>
+			<p>Here is a summary of your portfolio as of {{date}}</p> </div>
 
 		<div>
 			<h3>This Weeks Stock Value</h3>
@@ -38,10 +38,17 @@
 					<th>Closing Price</th>
 					<th>Value</th>
 				</tr>
-				//insertRows1//
+				{% for holding in person['holdings'] %}
+					<tr>
+						<td>{{holding['ticker']}}</td>
+						<td>{{holding['quantity']}}</td>
+						<td>${{holding['purchase-price']}}</td>
+						<td>${{holding['recent-price']}}</td>
+					</tr>
+				{% endfor %}
 				<tr>
 					<th colspan="3">Total</th>
-					<td>$//total//</td>
+					<td>${{netRecent}}</td>
 				</tr>
 			</table>
 
@@ -56,7 +63,28 @@
 					<th>On Purchase</th>
 					<th>On Last Week</th>
 				</tr>
-				//insertRows2//
+				{% for holding in person['holdings'] %}
+					<tr>
+						<td>{{holding['ticker']}}</td>
+						<td>${{holding['purchase-price']}}</td>
+						<td>${{holding['history'][-2]['price']}}</td>
+						<td>${{holding['recent-price']}}</td>
+						<td>
+							{{calcPercent(holding['recent-price'],holding['purchase-price'])}}%
+						</td>
+						<td>
+							{{calcPercent(holding['recent-price'], holding['history'][-2]['price'])}}%
+						</td>
+					</tr>
+				{% endfor %}
+				<tr>
+					<td>Portfolio Value</td>
+					<td>${{netPurchase}}</td>
+					<td>${{netLastWeek}}</td>
+					<td>${{netRecent}}</td>
+					<td>{{calcPercent(netRecent, netPurchase)}}%</td>
+					<td>{{calcPercent(netRecent, netLastWeek)}}%</td>
+				</tr>
 			</table>
 		</div>
 

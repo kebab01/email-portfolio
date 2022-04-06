@@ -1,236 +1,79 @@
-import mail
+from ast import arg
+import json
 import getPrices
 import datetime
-import pickle
-import os 
-import sys
-from dotenv import load_dotenv
-load_dotenv()
+import locale
+from mail import sendEmail
+from jinja2 import Environment, FileSystemLoader
+import argparse
 
-# contains infomation about person what stocks they own and what those stocks are worth
-class PersonObj:
+locale.setlocale(locale.LC_ALL, '' )# Set currency location
 
-	stocks = []
-	purchaseNet = 0
-	lastWeeksNet = 0
-	thisWeeksNet = 0
+def updateHoldings(holdings):
 
-	def __init__(self, name, email, stocks):
-		self.name = name
-		self.email = email
-		self.stocks = stocks 
-		self.purchaseNet = self.calcPurchaseNet()
+	for holding in holdings:
+		print("getting price for stock")
 
-	def getStocks(self):
-		return self.stocks
+		latestPrice = getPrices.getPrice(f"{holding['ticker']}.AX")
+		holding['recent-price'] = latestPrice
+		holding['history'].append({
+			"time":datetime.datetime.now().isoformat(),
+			"price":latestPrice
+		})
 
-	def getStockTickers(self):
-		tickers = []
-		for stock in self.stocks:
-			tickers.append(stock.getTicker())
+	return holdings
 
-	def getName(self):
-		return self.name
+def generateHTML(person):
+	print('Doing calculations for email...')
 
-	def getEmail(self):
-		return self.email
+	date = datetime.datetime.now()
+	date = date.strftime("%-d %B %Y")
 
-	def calcPurchaseNet(self):
-		total = 0
-		for stock in self.stocks:
-			total += stock.getPurchasePrice() * stock.getQuantity()
+	print("Generating email...")
 
-		return total
+	file_loader = FileSystemLoader("templates")
+	env = Environment(loader=file_loader)
+	template = env.get_template('email.html')
 
-	def calcNetWorth(self):
+	return template.render(
+		date=date, 
+		netPurchase=round(sum(i['purchase-price'] for i in person['holdings']),2),
+		netRecent=round(sum(i['recent-price'] for i in person['holdings']),2),
+		netLastWeek=round(sum(i['history'][-2]['price'] for i in person['holdings']),2),
+		person=person, 
+		calcPercent=calcPercent
+		)
 
-		total = 0
-		for stock in self.stocks:
-			total += stock.getLatestPrice() * stock.getQuantity()
+def calcPercent(x, y):
 
-		return total
-
-	def getPreviousNet(self):
-		return self.lastWeeksNet
-
-	def getLatestNet(self):
-		return self.thisWeeksNet
-
-	def getPurchaseNet(self):
-		return self.purchaseNet
-
-	def addPurchase(self, ticker, quantity, purchasePrice):
-		self.stocks.append(stockClass(ticker,purchasePrice, quantity))
-
-	def update(self):
-		self.lastWeeksNet = self.thisWeeksNet
-		self.thisWeeksNet = self.calcNetWorth()
-
-	def toString(self):
-		print(self.name, self.email, self.stocks, self.portfolio)
-
-class stockClass:
-
-	ticker = str()
-	purchasePrice = 0
-	lastWeekPrice = 0
-	thisWeekPrice = 0
-	quantity = 0
-
-	def __init__(self, ticker, purchasePrice, quantity):
-		self.ticker = ticker
-		self.purchasePrice = purchasePrice
-		self.quantity = quantity
-
-	def getTicker(self):
-		return self.ticker;
-
-	def setPurchase(self, price):
-		self.purchasePrice = price
-
-	def setPreviousPrice(self, price):
-		self.lastWeekPrice = price
-
-	def setLatestPrice(self,price):
-		self.thisWeekPrice = price
-
-	def getLatestPrice(self):
-		return self.thisWeekPrice;
-
-	def getPreviousPrice(self):
-		return self.lastWeekPrice
-
-	def getPurchasePrice(self):
-		return self.purchasePrice
-
-	def getQuantity(self):
-		return self.quantity
-
-	def update(self):
-		#Update stock price info
-		print(f"Updating stock price for {self.ticker}")
-		self.lastWeekPrice = self.thisWeekPrice
-		self.thisWeekPrice = getPrices.getPrice(self.ticker + ".AX")
-
-	def toString(self):
-		print(self.ticker, self.purchasePrice, self.lastWeekPrice, self.thisWeekPrice)
-
-
-people = [] #Array of person objects
-
-def getTime():
-	now = datetime.datetime.now()
-	now = now.strftime("%H:%m:%s %d-%m-%Y")
-
-	return now
-
-def export():
-
-	people.append(PersonObj('Person1', 'person1@domain.com', [stockClass('AJM',94.12, 2.5553), stockClass('DCX',14.2100, 17.4427)]))
-	people.append(PersonObj('Person2', 'person2@domain.com', [stockClass('AJM',94.12, 10.2212), stockClass('DCX',14.2100, 69.7708)]))
-	people.append(PersonObj('Person3', "person3@domain.com", [stockClass('AJM',94.12, 10.2212), stockClass('DCX',14.2100, 69.7708), stockClass('CWL',22.3200,45), stockClass('ANL',15.9400,141)]))
-	
-	for person in people:
-
-		savePerson(person)
-
-def addPurchase():
-	#Add a purchase to user profile
-	names = ["Person1", "Person2", "Person3"]
-
-	for name in names:
-		with open(name + ".dat", "rb") as f:
-			person = pickle.load(f)
-			people.append(person)
-
-	flag = False
-	selectedPerson = ""
-
-	while flag == False:
-
-		userInput = str(input("Enter name to add purchase to: "))
-		flag, selectedPerson = getValid(userInput)
-
-	while True:
-		ticker = input("Enter stock ticker: ")
-		print("Checking ticker is valid...")
-		price = getPrices.getPrice(ticker + ".AX")
-		if price != None:
-			break
-		else:
-			print("invalid ticker")
-
-	while True:
-		try:
-			quantity = float(input("Enter quantity: "))
-			purchasePrice = float(input("Enter purchase price: "))
-			break
-
-		except ValueError:
-			print("Invalid entry, try again")
-
-	selectedPerson.addPurchase(ticker, quantity, purchasePrice)
-	savePerson(selectedPerson)
-	print("Purchase added to "+ selectedPerson.getName())
-
-def getValid(userInput):
-
-	for person in people:
-		if userInput in person.getName():
-			return True, person
-
-	print("User does not exist")
-	return False, None
-
-def updatePerson():
-	#update person object, includes updateing of stock prices person owns
-	print("loading")
-	names = ["Person1", "Person2", "Person3"]
-
-	for name in names:
-		with open(name + ".dat", "rb") as f:
-			person = pickle.load(f)
-			people.append(person)
-
-			#Update their stock prices
-			for stock in person.getStocks():
-				stock.update()
-				stock.toString();
-
-			person.update()
-
-	for person in people:
-		savePerson(person)
-
-def savePerson(person):
-	with open(person.getName() + ".dat", "wb") as f:
-			pickle.dump(person, f)
+	try:
+		return round(((x/y) - 1)*100,2)
+	except ZeroDivisionError:
+		return 0
 
 def main():
 
-	if len(sys.argv) == 2:
+	parser = argparse.ArgumentParser(description='Manage portfolio tracking')
+	parser.add_argument('-a', help="Add new holding", action="store_true")
+	args = vars(parser.parse_args())
 
-		print(getTime())
-		print("Calculating holdings..")
+	data = open('data.json').read()
+	persons = json.loads(data)
 
-		if sys.argv[1] == "-a":
-			addPurchase()
+	if args['a'] == False:
+		
+		updatedPersons = []
+		for person in persons:
+			print("Getting info for", person['name'])
+			#Update stock prices
+			person['holdings'] = updateHoldings(person['holdings'])
+			content = generateHTML(person)
 
-		elif sys.argv[1] == "-n":
-			updatePerson()
-			for person in people:
-				mail.email(person)
-		elif sys.argv[1] == "-e":
-			export()
+			sendEmail(subject="Weekly Portfolio Update",recipient=person['email'], content=content)
+			updatedPersons.append(person)
 
-		else:
-			print("Invalid option \nChose either: \n-n for normal use  \n-a to add a purcchase \n-e to re export person objects")
-	
-	else:
-		print("Invalid arguments")
+		with open('data.json','w') as f:
+			json.dump(updatedPersons,fp=f, indent=2)
 
 if __name__ == "__main__":
-
-	# main()
-	print(os.getenv("PASS"))
-
+	main()
